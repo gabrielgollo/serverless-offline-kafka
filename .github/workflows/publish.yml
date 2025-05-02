@@ -10,6 +10,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    if: github.repository == 'gabrielgollo/serverless-offline-kafka'
     steps:
       - uses: actions/checkout@v4
 
