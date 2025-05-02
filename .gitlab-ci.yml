@@ -27,9 +27,6 @@ test:
       done
     - npm run lint
     - npm test
-  rules:
-    - if: '$GITLAB_USER_LOGIN != "gitlab-ci-bot"'
-      when: always
 
 publish:
   stage: publish
