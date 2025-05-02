@@ -1,4 +1,4 @@
-image: node:20
+image: docker:20.10.12-cli
 
 services:
   - docker:20.10.12-dind
