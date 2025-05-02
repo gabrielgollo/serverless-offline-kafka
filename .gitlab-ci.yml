@@ -4,13 +4,13 @@ stages:
   - publish
 
 variables:
-  NODE_IMAGE: node:18.18
+  NODE_IMAGE: gabrielgollo/node-docker-compose:v18
   DOCKER_IMAGE: docker:20.10.12
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
   NODE_ENV: test
 
-# Fase de instalação de dependências com Node.js
+# Instala dependências com Node.js e salva como artifact
 setup-node:
   stage: setup
   image: $NODE_IMAGE
@@ -23,7 +23,7 @@ setup-node:
       - node_modules/
     expire_in: 30m
 
-# Fase de testes, com docker-compose + lint + test
+# Roda docker-compose + lint + testes, reutilizando node_modules
 test:
   stage: test
   image: $NODE_IMAGE
@@ -31,12 +31,8 @@ test:
     - $DOCKER_IMAGE-dind
   dependencies:
     - setup-node
-  before_script:
-    - apt-get update && apt-get install -y docker.io docker-compose
-    - docker version
-    - npm ci
   script:
-    - docker-compose -f docker-compose-tests.yml up -d
+    - docker compose -f docker-compose-tests.yml up -d
     - echo "Waiting for Kafka..."
     - |
       for i in {1..30}; do
@@ -45,8 +41,9 @@ test:
       done
     - npm run lint
     - npm test
+    - docker compose -f docker-compose-tests.yml down
 
-# Fase de publicação, apenas em tags vX.Y.Z
+# Publica no NPM apenas quando um tag vX.Y.Z for criada
 publish:
   stage: publish
   image: $NODE_IMAGE
