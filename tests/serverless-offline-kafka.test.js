@@ -2,7 +2,7 @@ const { spawn } = require('child_process');
 const { Writable } = require('stream');
 const onExit = require('signal-exit');
 const { Kafka } = require('kafkajs');
-const { getSplitLinesTransform } = require('./utils'); // um transform stream que separa linhas por \n
+const { getSplitLinesTransform } = require('./utils');
 const path = require('path');
 
 const KAFKA_BROKER = 'localhost:9092';
@@ -17,6 +17,7 @@ async function sendKafkaMessages() {
   const producer = kafka.producer();
   await producer.connect();
 
+  console.log('[test] Enviando mensagens para o Kafka...');
   await producer.send({
     topic: TOPIC,
     messages: [
@@ -27,7 +28,10 @@ async function sendKafkaMessages() {
   });
 
   await producer.disconnect();
+  console.log('[test] Mensagens enviadas com sucesso.');
 }
+
+console.log('[test] Iniciando processo serverless...');
 
 const serverless = spawn('npm', ['run', 'start'], {
   cwd: path.resolve(__dirname, '..'),
@@ -35,18 +39,30 @@ const serverless = spawn('npm', ['run', 'start'], {
 });
 
 let handledCount = 0;
+let timeout = setTimeout(() => {
+  console.error('[test] ❌ Timeout atingido. Encerrando processo.');
+  serverless.kill();
+  process.exit(1);
+}, 20000); // 20 segundos
 
 serverless.stdout.pipe(getSplitLinesTransform()).pipe(
   new Writable({
     objectMode: true,
     write(line, enc, cb) {
+      console.log(`[serverless] ${line}`);
+
       if (/Listening for Kafka events/.test(line)) {
-        sendKafkaMessages();
+        console.log('[test] Detecção de que o serverless está pronto. Enviando mensagens Kafka...');
+        sendKafkaMessages().catch(console.error);
       }
 
       if (/handled .* with \d+ records/.test(line)) {
         handledCount++;
+        console.log(`[test] Evento processado (${handledCount})`);
+
         if (handledCount === 1) {
+          clearTimeout(timeout);
+          console.log('[test] ✅ Teste concluído com sucesso.');
           serverless.kill();
         }
       }
@@ -57,7 +73,7 @@ serverless.stdout.pipe(getSplitLinesTransform()).pipe(
 );
 
 serverless.on('close', (code) => {
-  console.log(`[test] Process exited with code ${code}`);
+  console.log(`[test] Processo finalizado com código ${code}`);
   process.exit(code);
 });
 
