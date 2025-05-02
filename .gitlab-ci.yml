@@ -37,7 +37,7 @@ test:
     - |
       for i in {1..30}; do
         echo "Tentando conexão com Kafka..."
-        docker exec serverless-offline-kafka-kafka-1 /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list && break
+        docker exec serverless-offline-kafka-kafka-1 kafka-topics --bootstrap-server localhost:9092 --list && break
         sleep 3
       done
     - npm run lint
