@@ -36,7 +36,7 @@ test:
     - echo "Waiting for Kafka..."
     - |
       for i in {1..30}; do
-        docker exec $(docker ps -qf "name=kafka") kafka-topics.sh --bootstrap-server localhost:9092 --list && break
+        docker exec "$(docker ps -qf "name=kafka")" kafka-topics.sh --bootstrap-server localhost:9092 --list && break
         sleep 3
       done
     - npm run lint
