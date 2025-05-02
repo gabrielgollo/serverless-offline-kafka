@@ -1,0 +1,32 @@
+service: serverless-offline-kafka
+
+plugins:
+  - serverless-offline
+  - ../
+
+provider:
+  name: aws
+  region: us-east-1
+  runtime: nodejs18.x
+
+
+custom:
+  serverless-offline:
+    httpPort: 3333
+  serverless-offline-kafka:
+    autoCreateTopics: true # If we can create topics in kafka automatically
+
+functions:
+  myPromiseHandler:
+    handler: lambda/handler.promise
+    events:
+      - kafka: 
+          accessConfigurations:
+            saslScram512Auth: 
+              username: myUserName
+              password: myPassword
+              securityProtocol: SASL_SSL
+          topic: MySelfManagedKafkaTopic
+          consumerGroupId: MyConsumerGroupId
+          bootstrapServers:
+            - localhost:9092

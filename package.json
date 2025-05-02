@@ -1,0 +1,50 @@
+{
+  "name": "serverless-offline-kafka",
+  "version": "1.0.0",
+  "description": "A serverless offline plugin that enables AWS Kafka events",
+  "main": "index.js",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "lint": "eslint src --ext .js",
+    "format": "eslint src --ext .js --fix",
+    "test": "node tests/serverless-offline-kafka.test.js",
+    "prepare": "npm run lint && npm test",
+    "prepublishOnly": "npm run prepare",
+    "start": ""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gabrielgollo/serverless-offline-kafka.git"
+  },
+  "keywords": [
+    "serverless",
+    "serverless-offline",
+    "serverless-plugin",
+    "lambda",
+    "kafka",
+    "aws",
+    "local"
+  ],
+  "author": "Gabriel Gollo gabrielsantosgollo@gmail.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/gabrielgollo/serverless-offline-kafka/issues"
+  },
+  "homepage": "https://github.com/gabrielgollo/serverless-offline-kafka#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "dependencies": {
+    "kafkajs": "^2.2.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.25.1",
+    "eslint": "^9.25.1",
+    "globals": "^16.0.0",
+    "serverless": "^3.40.0",
+    "serverless-offline": "^13.9.0"
+  }
+}

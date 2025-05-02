@@ -1,0 +1,10 @@
+node_modules/
+tests/
+examples/
+.eslintrc*
+eslint.config.*
+.github/
+.vscode/
+Dockerfile
+docker-compose*
+.env
