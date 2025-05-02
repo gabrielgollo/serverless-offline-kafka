@@ -4,7 +4,7 @@ stages:
   - publish
 
 variables:
-  NODE_IMAGE: gabrielgollo/node-docker-compose:v18
+  NODE_IMAGE: 172.18.0.1:5000/node-docker-compose:v18
   DOCKER_IMAGE: docker:20.10.12
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
