@@ -1,22 +1,40 @@
-image: docker:20.10.12
-
-services:
-  - docker:20.10.12-dind
+stages:
+  - setup
+  - test
+  - publish
 
 variables:
+  NODE_IMAGE: node:18.18
+  DOCKER_IMAGE: docker:20.10.12
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
   NODE_ENV: test
 
-stages:
-  - test
-  - publish
+# Fase de instalação de dependências com Node.js
+setup-node:
+  stage: setup
+  image: $NODE_IMAGE
+  script:
+    - node -v
+    - npm -v
+    - npm ci
+  artifacts:
+    paths:
+      - node_modules/
+    expire_in: 30m
 
-before_script:
-  - npm ci
-
+# Fase de testes, com docker-compose + lint + test
 test:
   stage: test
+  image: $NODE_IMAGE
+  services:
+    - $DOCKER_IMAGE-dind
+  dependencies:
+    - setup-node
+  before_script:
+    - apt-get update && apt-get install -y docker.io docker-compose
+    - docker version
+    - npm ci
   script:
     - docker compose -f docker-compose-local.yml up -d
     - echo "Waiting for Kafka..."
@@ -28,12 +46,14 @@ test:
     - npm run lint
     - npm test
 
+# Fase de publicação, apenas em tags vX.Y.Z
 publish:
   stage: publish
+  image: $NODE_IMAGE
+  dependencies:
+    - setup-node
   script:
     - npm publish
-  environment:
-    name: production
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/'
       when: always
