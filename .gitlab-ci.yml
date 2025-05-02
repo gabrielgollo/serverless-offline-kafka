@@ -30,8 +30,6 @@ test:
 
 publish:
   stage: publish
-  only:
-    - tags
   script:
     - npm publish
   environment:
