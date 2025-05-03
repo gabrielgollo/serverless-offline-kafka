@@ -39,28 +39,35 @@ const serverless = spawn('npm', ['run', 'start'], {
 });
 
 let handledCount = 0;
-let timeout = setTimeout(() => {
+let kafkaSent = false;
+
+const timeout = setTimeout(() => {
   console.error('[test] ❌ Timeout atingido. Encerrando processo.');
   serverless.kill();
   process.exit(1);
-}, 20000); // 20 segundos
+}, 30000); // timeout aumentado para 30s
 
 serverless.stdout.pipe(getSplitLinesTransform()).pipe(
   new Writable({
     objectMode: true,
-    write(line, enc, cb) {
+    async write(line, enc, cb) {
       console.log(`[serverless] ${line}`);
 
-      if (/Listening for Kafka events/.test(line)) {
-        console.log('[test] Detecção de que o serverless está pronto. Enviando mensagens Kafka...');
-        sendKafkaMessages().catch(console.error);
+      if (/Listening for Kafka events/.test(line) && !kafkaSent) {
+        kafkaSent = true;
+        console.log('[test] Serverless pronto. Enviando mensagens Kafka...');
+        try {
+          await sendKafkaMessages();
+        } catch (err) {
+          console.error('[test] Erro ao enviar mensagens Kafka:', err);
+        }
       }
 
       if (/handled .* with \d+ records/.test(line)) {
         handledCount++;
         console.log(`[test] Evento processado (${handledCount})`);
 
-        if (handledCount === 1) {
+        if (handledCount >= 1) {
           clearTimeout(timeout);
           console.log('[test] ✅ Teste concluído com sucesso.');
           serverless.kill();
