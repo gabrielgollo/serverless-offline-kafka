@@ -2,7 +2,7 @@ service: serverless-offline-kafka
 
 plugins:
   - serverless-offline
-  - ../
+  - ./
 
 provider:
   name: aws
