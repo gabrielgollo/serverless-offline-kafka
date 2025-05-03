@@ -12,7 +12,7 @@
     "test": "node tests/serverless-offline-kafka.test.js",
     "prepare": "npm run lint && npm test",
     "prepublishOnly": "npm run prepare",
-    "start": ""
+    "start": "serverless offline --stage local --region us-east-1"
   },
   "repository": {
     "type": "git",
