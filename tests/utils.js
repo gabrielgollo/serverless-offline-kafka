@@ -1,17 +1,25 @@
 const { Transform } = require('stream');
 
 function getSplitLinesTransform() {
-  let buffer = '';
+  let leftover = '';
+
   return new Transform({
-    objectMode: true,
-    transform(chunk, _encoding, callback) {
-      buffer += chunk.toString();
-      const lines = buffer.split(/\r?\n/);
-      buffer = lines.pop(); // keep incomplete line
-      lines.forEach((line) => callback(null, line));
+    readableObjectMode: true,
+    transform(chunk, _enc, callback) {
+      try {
+        const lines = (leftover + chunk.toString()).split('\n');
+        leftover = lines.pop(); // última linha incompleta (se houver)
+        for (const line of lines) {
+          if (line.trim()) this.push(line);
+        }
+        callback();
+      } catch (err) {
+        callback(err);
+      }
     },
     flush(callback) {
-      if (buffer) callback(null, buffer);
+      if (leftover.trim()) this.push(leftover);
+      callback();
     },
   });
 }

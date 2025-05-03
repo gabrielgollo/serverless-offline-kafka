@@ -45,36 +45,49 @@ const timeout = setTimeout(() => {
   console.error('[test] ❌ Timeout atingido. Encerrando processo.');
   serverless.kill();
   process.exit(1);
-}, 30000); // timeout aumentado para 30s
+}, 30000);
 
+// LOG DE STDERR
+serverless.stderr.pipe(getSplitLinesTransform()).pipe(
+  new Writable({
+    objectMode: true,
+    write(line, _enc, callback) {
+      console.error(`[serverless:stderr] ${line}`);
+      callback();
+    },
+  })
+);
+
+// LOG DE STDOUT + CONTROLE DO FLUXO
 serverless.stdout.pipe(getSplitLinesTransform()).pipe(
   new Writable({
     objectMode: true,
-    async write(line, enc, cb) {
-      console.log(`[serverless] ${line}`);
+    async write(line, _enc, callback) {
+      try {
+        console.log(`[serverless] ${line}`);
 
-      if (/Listening for Kafka events/.test(line) && !kafkaSent) {
-        kafkaSent = true;
-        console.log('[test] Serverless pronto. Enviando mensagens Kafka...');
-        try {
+        if (/Listening for Kafka events/.test(line) && !kafkaSent) {
+          kafkaSent = true;
+          console.log('[test] Serverless pronto. Enviando mensagens Kafka...');
           await sendKafkaMessages();
-        } catch (err) {
-          console.error('[test] Erro ao enviar mensagens Kafka:', err);
         }
-      }
 
-      if (/handled .* with \d+ records/.test(line)) {
-        handledCount++;
-        console.log(`[test] Evento processado (${handledCount})`);
+        if (/handled .* with \d+ records/.test(line)) {
+          handledCount++;
+          console.log(`[test] Evento processado (${handledCount})`);
 
-        if (handledCount >= 1) {
-          clearTimeout(timeout);
-          console.log('[test] ✅ Teste concluído com sucesso.');
-          serverless.kill();
+          if (handledCount >= 1) {
+            clearTimeout(timeout);
+            console.log('[test] ✅ Teste concluído com sucesso.');
+            serverless.kill();
+          }
         }
-      }
 
-      cb();
+        callback();
+      } catch (err) {
+        console.error('[test] Erro interno no teste:', err);
+        callback(err);
+      }
     },
   })
 );
