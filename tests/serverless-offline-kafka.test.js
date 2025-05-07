@@ -5,7 +5,7 @@ const { Kafka } = require('kafkajs');
 const { getSplitLinesTransform } = require('./utils');
 const path = require('path');
 
-const KAFKA_BROKER = 'localhost:9092';
+const KAFKA_BROKER = 'kafka:9092';
 const TOPIC = 'local.topic.test';
 
 const kafka = new Kafka({
