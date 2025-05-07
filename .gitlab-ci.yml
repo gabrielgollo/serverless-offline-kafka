@@ -43,6 +43,8 @@ test:
     - npm run lint
     - npm test
     - docker compose -f docker-compose-tests.yml down
+  variables:
+    KAFKA_BROKER: kafka:9092
 
 # Publica no NPM apenas quando um tag vX.Y.Z for criada
 publish:

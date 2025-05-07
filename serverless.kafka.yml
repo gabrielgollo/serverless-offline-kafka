@@ -15,6 +15,7 @@ custom:
     httpPort: 3333
   serverless-offline-kafka:
     autoCreateTopics: true # If we can create topics in kafka automatically
+    ssl: false
 
 functions:
   myPromiseHandler:
@@ -29,4 +30,4 @@ functions:
           topic: MySelfManagedKafkaTopic
           consumerGroupId: MyConsumerGroupId
           bootstrapServers:
-            - localhost:9092
+            - ${env:KAFKA_BROKER}

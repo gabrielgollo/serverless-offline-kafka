@@ -9,7 +9,7 @@ const KAFKA_BROKER = '127.0.0.1:9092';
 const TOPIC = 'local.topic.test';
 
 const kafka = new Kafka({
-  clientId: 'test-client',
+  clientId: 'test-client-consumer',
   brokers: [KAFKA_BROKER],
 });
 
