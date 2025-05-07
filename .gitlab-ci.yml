@@ -45,6 +45,7 @@ test:
         exit 1
       fi
     - echo "✔ Kafka está rodando. Continuando com os testes..."
+    - export KAFKA_BROKER=$(ip route | awk '/default/ {print $3}'):9092
     - npm run lint
     - npm test
     - docker compose -f docker-compose-tests.yml down
