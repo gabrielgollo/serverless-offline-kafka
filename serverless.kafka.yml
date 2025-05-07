@@ -30,4 +30,4 @@ functions:
           topic: MySelfManagedKafkaTopic
           consumerGroupId: MyConsumerGroupId
           bootstrapServers:
-            - ${env:KAFKA_BROKER}
+            - 127.0.0.1:9092
