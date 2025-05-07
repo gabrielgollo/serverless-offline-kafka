@@ -9,7 +9,7 @@ variables:
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
   NODE_ENV: test
-  KAFKA_BROKER: kafka:9092
+  KAFKA_BROKER: 172.18.0.1:9092
 
 # Instala dependências com Node.js e salva como artifact
 setup-node:
@@ -44,8 +44,7 @@ test:
         echo "❌ Kafka não respondeu após 30 tentativas. Finalizando pipeline com erro."
         exit 1
       fi
-    - docker network connect testnet $(hostname)
-    - echo "Kafka está rodando. Continuando com os testes..."
+    - echo "✔ Kafka está rodando. Continuando com os testes..."
     - npm run lint
     - npm test
     - docker compose -f docker-compose-tests.yml down
