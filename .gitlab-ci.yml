@@ -44,6 +44,8 @@ test:
         echo "❌ Kafka não respondeu após 30 tentativas. Finalizando pipeline com erro."
         exit 1
       fi
+    - docker network connect testnet $(hostname)
+    - echo "Kafka está rodando. Continuando com os testes..."
     - npm run lint
     - npm test
     - docker compose -f docker-compose-tests.yml down
