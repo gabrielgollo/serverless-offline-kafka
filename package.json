@@ -10,8 +10,6 @@
     "lint": "eslint src --ext .js",
     "format": "eslint src --ext .js --fix",
     "test": "node tests/serverless-offline-kafka.test.js",
-    "prepare": "npm run lint && npm test",
-    "prepublishOnly": "npm run prepare",
     "start": "npx serverless offline start --config ./serverless.kafka.yml --stage local --region us-east-1 --noPrependStageInUrl"
   },
   "repository": {
