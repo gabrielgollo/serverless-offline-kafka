@@ -36,6 +36,7 @@ console.log('[test] Iniciando processo serverless...');
 const serverless = spawn('npm', ['run', 'start'], {
   cwd: path.resolve(__dirname, '..'),
   stdio: ['pipe', 'pipe', 'pipe'],
+  shell: true,
 });
 
 let handledCount = 0;
