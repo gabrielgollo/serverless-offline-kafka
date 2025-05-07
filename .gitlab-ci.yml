@@ -4,11 +4,12 @@ stages:
   - publish
 
 variables:
-  NODE_IMAGE: 172.18.0.1:5000/node-docker-compose:v18
+NODE_IMAGE: 172.18.0.1:5000/node-docker-compose:v18
   DOCKER_IMAGE: docker:20.10.12
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
   NODE_ENV: test
+  KAFKA_BROKER: kafka:9092
 
 # Instala dependências com Node.js e salva como artifact
 setup-node:
@@ -33,18 +34,19 @@ test:
     - setup-node
   script:
     - docker compose -f docker-compose-tests.yml up -d
-    - echo "Waiting for Kafka..."
+    - echo "Esperando Kafka subir em kafka:9092..."
     - |
       for i in {1..30}; do
-        echo "Tentando conexão com Kafka..."
-        docker exec serverless-offline-kafka-kafka-1 kafka-topics --bootstrap-server localhost:9092 --list && break
-        sleep 3
+        docker exec kafka kafka-topics --bootstrap-server localhost:9092 --list && break
+        echo "Aguardando Kafka... ($i)"; sleep 2
       done
+      if [ "$i" = "30" ]; then
+        echo "❌ Kafka não respondeu após 30 tentativas. Finalizando pipeline com erro."
+        exit 1
+      fi
     - npm run lint
     - npm test
     - docker compose -f docker-compose-tests.yml down
-  variables:
-    KAFKA_BROKER: kafka:9092
 
 # Publica no NPM apenas quando um tag vX.Y.Z for criada
 publish:
