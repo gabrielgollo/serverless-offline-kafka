@@ -9,7 +9,7 @@ variables:
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
   NODE_ENV: test
-  KAFKA_BROKER: 172.18.0.1:9092
+  KAFKA_BROKER: localhost:9092
 
 # Instala dependências com Node.js e salva como artifact
 setup-node:
