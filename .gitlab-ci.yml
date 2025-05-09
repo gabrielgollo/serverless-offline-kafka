@@ -44,8 +44,14 @@ test:
         echo "❌ Kafka não respondeu após 30 tentativas. Finalizando pipeline com erro."
         exit 1
       fi
-    - export KAFKA_BROKER=$(ip route | awk '/default/ {print $3}'):9092
-    - echo "🔎 KAFKA_BROKER '$KAFKA_BROKER'"
+    - export KAFKA_BROKER=$(docker network inspect bridge --format='{{(index .IPAM.Config 0).Gateway}}')
+    - |
+      if [ -z "$KAFKA_BROKER" ]; then
+        echo "❌ Não foi possível determinar o IP do KAFKA_BROKER!"
+        exit 1
+      fi
+      export KAFKA_BROKER="$KAFKA_BROKER:9092"
+      echo "🔎 KAFKA_BROKER configurado como '$KAFKA_BROKER'"
     - echo "✔ Kafka está rodando. Continuando com os testes..."
     - npm run lint
     - npm test
