@@ -27,6 +27,8 @@ setup-node:
 test:
   stage: test
   image: $NODE_IMAGE
+  services:
+    - docker:dind
   dependencies:
     - setup-node
   script:
