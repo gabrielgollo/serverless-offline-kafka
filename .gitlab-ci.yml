@@ -33,7 +33,7 @@ test:
   dependencies:
     - setup-node
   script:
-    - docker compose -f docker-compose-tests.yml up -d
+    - docker compose -f docker-compose-tests.yml -p teststack up -d
     - echo "Esperando Kafka subir em kafka:9092..."
     - |
       for i in {1..30}; do
@@ -44,8 +44,9 @@ test:
         echo "❌ Kafka não respondeu após 30 tentativas. Finalizando pipeline com erro."
         exit 1
       fi
-    - echo "✔ Kafka está rodando. Continuando com os testes..."
     - export KAFKA_BROKER=$(ip route | awk '/default/ {print $3}'):9092
+    - echo "🔎 KAFKA_BROKER '$KAFKA_BROKER'"
+    - echo "✔ Kafka está rodando. Continuando com os testes..."
     - npm run lint
     - npm test
     - docker compose -f docker-compose-tests.yml down
