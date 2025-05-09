@@ -4,9 +4,8 @@ stages:
   - publish
 
 variables:
-  NODE_IMAGE: 172.18.0.1:5000/node-docker-compose:v18
-  DOCKER_IMAGE: docker:20.10.12
-  DOCKER_HOST: tcp://docker:2375
+  # NODE_IMAGE: 172.18.0.1:5000/node-docker-compose:v18
+  NODE_IMAGE: node:18.18
   DOCKER_TLS_CERTDIR: ""
   NODE_ENV: test
   KAFKA_BROKER: localhost:9092
@@ -28,13 +27,11 @@ setup-node:
 test:
   stage: test
   image: $NODE_IMAGE
-  services:
-    - $DOCKER_IMAGE-dind
   dependencies:
     - setup-node
   script:
     - docker compose -f docker-compose-tests.yml -p teststack up -d
-    - echo "Esperando Kafka subir em kafka:9092..."
+    - echo "Esperando Kafka subir..."
     - |
       for i in {1..30}; do
         docker exec kafka kafka-topics --bootstrap-server localhost:9092 --list && break
