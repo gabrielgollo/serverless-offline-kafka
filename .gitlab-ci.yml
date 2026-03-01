@@ -4,9 +4,8 @@ stages:
 
 variables:
   NODE_IMAGE: ubu1:5000/node-docker-compose:v18
-  DOCKER_TLS_CERTDIR: ""
   NODE_ENV: test
-  KAFKA_BROKER: docker:29092
+  KAFKA_BROKER: kafka:9092
   NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/.npm"
 
 cache:
@@ -21,38 +20,68 @@ test:
   stage: test
   image: $NODE_IMAGE
   services:
-    - docker:dind
+    - name: confluentinc/cp-zookeeper:7.2.1
+      alias: kafka-zookeeper
+      variables:
+        ZOOKEEPER_CLIENT_PORT: "2181"
+        ZOOKEEPER_SERVER_ID: "1"
+        ZOOKEEPER_SERVERS: "kafka-zookeeper:2888:3888"
+    - name: confluentinc/cp-kafka:7.2.1
+      alias: kafka
+      variables:
+        KAFKA_BROKER_ID: "1"
+        KAFKA_ZOOKEEPER_CONNECT: "kafka-zookeeper:2181"
+        KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092"
+        KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+        KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT"
+        KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+        KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+        KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+        KAFKA_CONFLUENT_SUPPORT_METRICS_ENABLE: "false"
   script:
     - node -v
     - npm -v
     - npm ci --prefer-offline --no-audit
-    - docker compose -f docker-compose-tests.yml -p teststack up -d
     - echo "Waiting for Kafka to start..."
     - |
-      i=1
-      while [ "$i" -le 30 ]; do
-        if docker exec kafka kafka-topics --bootstrap-server kafka:9092 --list >/dev/null 2>&1; then
-          break
-        fi
-        echo "Waiting for Kafka... ($i)"
-        sleep 2
-        i=$((i + 1))
-      done
-      if [ "$i" -gt 30 ]; then
-        echo "Kafka did not respond after 30 attempts."
-        exit 1
-      fi
-    - |
-      if [ -z "$KAFKA_BROKER" ]; then
-        echo "KAFKA_BROKER is not defined."
-        exit 1
-      fi
-      echo "KAFKA_BROKER set to '$KAFKA_BROKER'"
+      node - <<'NODE'
+      const { Kafka } = require('kafkajs');
+
+      const broker = process.env.KAFKA_BROKER;
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const kafka = new Kafka({
+        clientId: 'ci-kafka-healthcheck',
+        brokers: [broker],
+      });
+
+      (async () => {
+        for (let i = 1; i <= 30; i += 1) {
+          const admin = kafka.admin();
+          try {
+            await admin.connect();
+            await admin.listTopics();
+            await admin.disconnect();
+            console.log(`Kafka is ready on ${broker}`);
+            process.exit(0);
+          } catch (_error) {
+            try {
+              await admin.disconnect();
+            } catch (_disconnectError) {
+              // Ignore disconnect errors during retries.
+            }
+            console.log(`Waiting for Kafka... (${i}/30)`);
+            await sleep(2000);
+          }
+        }
+
+        console.error('Kafka did not respond after 30 attempts.');
+        process.exit(1);
+      })();
+      NODE
     - npm run lint
     - npm run test:unit
     - npm run test:integration
-  after_script:
-    - docker compose -f docker-compose-tests.yml down
 
 publish:
   stage: publish
