@@ -5,7 +5,7 @@ stages:
 variables:
   NODE_IMAGE: ubu1:5000/node-docker-compose:v18
   NODE_ENV: test
-  KAFKA_BROKER: kafka:9092
+  KAFKA_BROKER: kafka:9092,localhost:9092,docker:29092
   NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/.npm"
 
 cache:
@@ -48,11 +48,19 @@ test:
       node - <<'NODE'
       const { Kafka } = require('kafkajs');
 
-      const broker = process.env.KAFKA_BROKER;
+      const brokers = (process.env.KAFKA_BROKER || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+      if (brokers.length === 0) {
+        console.error('No KAFKA_BROKER values provided.');
+        process.exit(1);
+      }
+
       const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       const kafka = new Kafka({
         clientId: 'ci-kafka-healthcheck',
-        brokers: [broker],
+        brokers,
       });
 
       (async () => {
@@ -62,7 +70,7 @@ test:
             await admin.connect();
             await admin.listTopics();
             await admin.disconnect();
-            console.log(`Kafka is ready on ${broker}`);
+            console.log(`Kafka is ready. Candidate brokers: ${brokers.join(', ')}`);
             process.exit(0);
           } catch (_error) {
             try {
@@ -70,7 +78,7 @@ test:
             } catch (_disconnectError) {
               // Ignore disconnect errors during retries.
             }
-            console.log(`Waiting for Kafka... (${i}/30)`);
+            console.log(`Waiting for Kafka... (${i}/30), brokers: ${brokers.join(', ')}`);
             await sleep(2000);
           }
         }

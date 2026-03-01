@@ -22,7 +22,10 @@ function ensureStringList(value) {
   }
 
   if (typeof value === 'string' && value.trim().length > 0) {
-    return [value];
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
   }
 
   return [];

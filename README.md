@@ -94,6 +94,11 @@ For SASL/SCRAM auth, `saslScram512Auth` supports:
 - inline object with `username` and `password`
 - AWS Secrets Manager ARN string (requires Serverless AWS provider support)
 
+`bootstrapServers` accepts:
+
+- YAML list, for example `["localhost:9092", "localhost:9093"]`
+- comma-separated string, for example `"localhost:9092,localhost:9093"`
+
 ## Local run
 
 ```bash
