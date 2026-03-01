@@ -1,76 +1,137 @@
 # serverless-offline-kafka
 
-A Serverless Framework plugin that enables local Kafka event simulation for AWS Lambda functions using `serverless-offline`.
+Serverless Framework plugin for local debugging of AWS Lambda functions triggered by Kafka events.
 
-[![serverless](https://cdn.prod.website-files.com/60acbb950c4d6606963e1fed/60acbb950c4d66854e3e2013_logo%20serverless%20dark.svg)](http://www.serverless.com)
-[![npm version](https://badge.fury.io/js/serverless-offline-kafka.svg)](https://badge.fury.io/js/serverless-offline-kafka)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+It runs alongside `serverless-offline`, starts Kafka consumers defined in your `serverless.yml`, and invokes local Lambda handlers using a payload compatible with `SelfManagedKafka`.
 
-> **Note**
->
-> Found a bug or want to contribute? Feel free to open an [issue](https://github.com/gabrielgollo/serverless-offline-kafka/issues) or a pull request!
+## Why this plugin
 
----
+- Keep Kafka event contracts close to real Lambda event shape
+- Debug consumers locally before deploying infrastructure
+- Reuse your existing `serverless.yml` event configuration
+- Run integration tests against real Kafka broker in Docker
 
-## Getting Started
+## Requirements
 
-This plugin enables your local Serverless project to handle Kafka messages using `serverless-offline`.
-
-### Features
-
-✅ Supports Kafka events  
-✅ Fully compatible with `serverless.yml` event definitions  
-✅ Supports mocking of Kafka topics and batch consumption  
-✅ Designed to run alongside `serverless-offline`
-
----
-
-## Example
-
-See the [`examples`](./examples/) folder for usage.
-
----
+- Node.js `>= 18`
+- Serverless Framework `>= 3`
+- `serverless-offline`
+- A reachable Kafka broker (for local tests, use `docker-compose-tests.yml`)
 
 ## Installation
 
-Install with npm or yarn:
-
 ```bash
 npm install --save-dev serverless-offline-kafka
-# or
-yarn add -D serverless-offline-kafka
 ```
 
-Then, update your serverless.yml:
+In your `serverless.yml`, keep plugin order as shown:
 
 ```yaml
 plugins:
   - serverless-offline
-  - serverless-offline-kafka # Make sure this is after serverless-offline
+  - serverless-offline-kafka
 ```
 
-## Plugin Configuration
+## Configuration
+
+Plugin-level config goes under `custom.serverless-offline-kafka`.
+
 ```yaml
 custom:
   serverless-offline-kafka:
-    autoCreateTopics: true # If we can create topics in kafka automatically
-    debugPython: true # If we can debug the python process
+    autoCreateTopics: true
+    ssl: false
+    clientId: serverless-offline-kafka
+    defaultConsumerGroupId: serverless-offline-kafka
+    sessionTimeout: 30000
+    heartbeatInterval: 3000
+    batchSize: 1
+    maximumBatchingWindowInSeconds: 0
 ```
 
-## Usage
+### Plugin options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `autoCreateTopics` | boolean | `true` | Creates topic when missing (single partition, replication factor 1). |
+| `ssl` | boolean | `false` | Enables Kafka TLS connection. |
+| `clientId` | string | `serverless-offline-kafka` | Base KafkaJS client id. Function key is appended per consumer. |
+| `defaultConsumerGroupId` | string | `serverless-offline-kafka` | Consumer group fallback for events without explicit `consumerGroupId`. |
+| `sessionTimeout` | number | `30000` | Kafka consumer session timeout in ms. |
+| `heartbeatInterval` | number | `3000` | Kafka consumer heartbeat interval in ms. |
+| `batchSize` | number | `1` | Default max records per Lambda invocation. |
+| `maximumBatchingWindowInSeconds` | number | `0` | Default time window to flush incomplete batches. |
+
+### Function event options
+
 ```yaml
 functions:
-  myFunction:
-    handler: handler.myFunction
+  processOrders:
+    handler: src/handler.process
     events:
       - kafka:
-            enable: true # If we want to enable the kafka event
-            topicName: my-topic # The topic name to consume from
-            batch: true # If we want to consume in batch
-            startingPosition: LATEST # The starting position of the kafka consumer
-            maximumBatchingWindowInSeconds: 10 # The maximum time to wait for a batch to be ready
-            batchSize: 100 # The maximum number of messages to consume in a batch
-            brokers:
-                - localhost:9092 # The kafka broker to connect to
-            topicName: my-topic # The topic name to consume from
+          topic: local.orders
+          bootstrapServers:
+            - localhost:9092
+          consumerGroupId: local-orders-group
+          startingPosition: TRIM_HORIZON
+          batchSize: 10
+          maximumBatchingWindowInSeconds: 5
+          accessConfigurations:
+            saslScram512Auth:
+              username: my-user
+              password: my-password
 ```
+
+Supported aliases:
+
+- `topicName` (alias of `topic`)
+- `brokers` (alias of `bootstrapServers`)
+- `enable` or `enabled` set to `false` disables that kafka event
+
+For SASL/SCRAM auth, `saslScram512Auth` supports:
+
+- inline object with `username` and `password`
+- AWS Secrets Manager ARN string (requires Serverless AWS provider support)
+
+## Local run
+
+```bash
+npm run start
+```
+
+Expected startup logs:
+
+- `[serverless-offline-kafka] started`
+- `[serverless-offline-kafka] Listening for Kafka events`
+- `[serverless-offline-kafka] Listening on topic "<topic>" for function "<fn>" using group "<group>"`
+
+## Development
+
+### Scripts
+
+```bash
+npm run lint
+npm run test:unit
+npm run test:integration
+npm test
+```
+
+`npm test` executes unit + integration tests.
+
+### Test layout
+
+- `tests/unit`: isolated tests for config, payload mapping, and batching
+- `tests/serverless-offline-kafka.test.js`: end-to-end integration with Kafka broker
+
+## Architecture
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for module responsibilities and runtime flow.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+MIT

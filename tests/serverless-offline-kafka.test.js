@@ -1,15 +1,17 @@
+'use strict';
+
 const { spawn } = require('child_process');
 const { Writable } = require('stream');
 const onExit = require('signal-exit');
 const { Kafka } = require('kafkajs');
-const { getSplitLinesTransform } = require('./utils');
 const path = require('path');
+const { getSplitLinesTransform } = require('./utils');
 
 const KAFKA_BROKER = '127.0.0.1:9092';
 const TOPIC = 'local.topic.test';
 
 const kafka = new Kafka({
-  clientId: 'test-client-consumer',
+  clientId: 'test-client-producer',
   brokers: [KAFKA_BROKER],
 });
 
@@ -17,7 +19,6 @@ async function sendKafkaMessages() {
   const producer = kafka.producer();
   await producer.connect();
 
-  console.log('[test] Enviando mensagens para o Kafka...');
   await producer.send({
     topic: TOPIC,
     messages: [
@@ -28,10 +29,7 @@ async function sendKafkaMessages() {
   });
 
   await producer.disconnect();
-  console.log('[test] Mensagens enviadas com sucesso.');
 }
-
-console.log('[test] Iniciando processo serverless...');
 
 const serverless = spawn('npm', ['run', 'start'], {
   cwd: path.resolve(__dirname, '..'),
@@ -41,63 +39,65 @@ const serverless = spawn('npm', ['run', 'start'], {
 
 let handledCount = 0;
 let kafkaSent = false;
+let hasFailed = false;
 
 const timeout = setTimeout(() => {
-  console.error('[test] ❌ Timeout atingido. Encerrando processo.');
+  hasFailed = true;
   serverless.kill();
   process.exit(1);
 }, 30000);
 
-// LOG DE STDERR
 serverless.stderr.pipe(getSplitLinesTransform()).pipe(
   new Writable({
     objectMode: true,
     write(line, _enc, callback) {
-      console.error(`[serverless:stderr] ${line}`);
+      // Keep stderr visible for CI diagnostics.
+      process.stderr.write(`[serverless:stderr] ${line}\n`);
       callback();
     },
   })
 );
 
-// LOG DE STDOUT + CONTROLE DO FLUXO
 serverless.stdout.pipe(getSplitLinesTransform()).pipe(
   new Writable({
     objectMode: true,
     async write(line, _enc, callback) {
       try {
-        console.log(`[serverless] ${line}`);
+        process.stdout.write(`[serverless] ${line}\n`);
 
         if (/Listening for Kafka events/.test(line) && !kafkaSent) {
           kafkaSent = true;
-          console.log('[test] Serverless pronto. Enviando mensagens Kafka...');
           await sendKafkaMessages();
         }
 
         if (/handled .* with \d+ records/.test(line)) {
-          handledCount++;
-          console.log(`[test] Evento processado (${handledCount})`);
-
+          handledCount += 1;
           if (handledCount >= 1) {
             clearTimeout(timeout);
-            console.log('[test] ✅ Teste concluído com sucesso.');
             serverless.kill();
           }
         }
 
         callback();
-      } catch (err) {
-        console.error('[test] Erro interno no teste:', err);
-        callback(err);
+      } catch (error) {
+        hasFailed = true;
+        callback(error);
       }
     },
   })
 );
 
 serverless.on('close', (code) => {
-  console.log(`[test] Processo finalizado com código ${code}`);
-  process.exit(code);
+  if (hasFailed) {
+    process.exit(1);
+  }
+
+  const normalizedCode = code === null ? 0 : code;
+  process.exit(normalizedCode);
 });
 
 onExit((_code, signal) => {
-  if (signal) serverless.kill(signal);
+  if (signal) {
+    serverless.kill(signal);
+  }
 });

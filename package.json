@@ -9,7 +9,9 @@
   "scripts": {
     "lint": "eslint src --ext .js",
     "format": "eslint src --ext .js --fix",
-    "test": "node tests/serverless-offline-kafka.test.js",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "node --test --test-isolation=none tests/unit/**/*.test.js",
+    "test:integration": "node tests/serverless-offline-kafka.test.js",
     "start": "npx serverless offline start --config ./serverless.kafka.yml --stage local --region us-east-1 --noPrependStageInUrl"
   },
   "repository": {

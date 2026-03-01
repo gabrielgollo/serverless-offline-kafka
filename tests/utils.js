@@ -1,3 +1,5 @@
+'use strict';
+
 const { Transform } = require('stream');
 
 function getSplitLinesTransform() {
@@ -8,17 +10,21 @@ function getSplitLinesTransform() {
     transform(chunk, _enc, callback) {
       try {
         const lines = (leftover + chunk.toString()).split('\n');
-        leftover = lines.pop(); // última linha incompleta (se houver)
+        leftover = lines.pop();
         for (const line of lines) {
-          if (line.trim()) this.push(line);
+          if (line.trim()) {
+            this.push(line);
+          }
         }
         callback();
-      } catch (err) {
-        callback(err);
+      } catch (error) {
+        callback(error);
       }
     },
     flush(callback) {
-      if (leftover.trim()) this.push(leftover);
+      if (leftover.trim()) {
+        this.push(leftover);
+      }
       callback();
     },
   });

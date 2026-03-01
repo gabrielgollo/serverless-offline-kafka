@@ -27,7 +27,9 @@ functions:
               username: myUserName
               password: myPassword
               securityProtocol: SASL_SSL
-          topic: MySelfManagedKafkaTopic
-          consumerGroupId: MyConsumerGroupId
+          topic: local.topic.test
+          consumerGroupId: local.test.group
+          batchSize: 3
+          maximumBatchingWindowInSeconds: 2
           bootstrapServers:
             - ${env:KAFKA_BROKER, 'localhost:9092'}

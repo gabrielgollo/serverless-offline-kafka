@@ -5,12 +5,10 @@ stages:
 
 variables:
   NODE_IMAGE: 172.18.0.1:5000/node-docker-compose:v18
-  # NODE_IMAGE: node:18.18
   DOCKER_TLS_CERTDIR: ""
   NODE_ENV: test
   KAFKA_BROKER: localhost:9092
 
-# Instala dependências com Node.js e salva como artifact
 setup-node:
   stage: setup
   image: $NODE_IMAGE
@@ -23,7 +21,6 @@ setup-node:
       - node_modules/
     expire_in: 30m
 
-# Roda docker-compose + lint + testes, reutilizando node_modules
 test:
   stage: test
   image: $NODE_IMAGE
@@ -33,28 +30,27 @@ test:
     - setup-node
   script:
     - docker compose -f docker-compose-tests.yml -p teststack up -d
-    - echo "Esperando Kafka subir..."
+    - echo "Waiting for Kafka to start..."
     - |
       for i in {1..30}; do
         docker exec kafka kafka-topics --bootstrap-server localhost:9092 --list && break
-        echo "Aguardando Kafka... ($i)"; sleep 2
+        echo "Waiting for Kafka... ($i)"; sleep 2
       done
       if [ "$i" = "30" ]; then
-        echo "❌ Kafka não respondeu após 30 tentativas. Finalizando pipeline com erro."
+        echo "Kafka did not respond after 30 attempts."
         exit 1
       fi
     - |
       if [ -z "$KAFKA_BROKER" ]; then
-        echo "❌ Não foi possível determinar o IP do KAFKA_BROKER!"
+        echo "KAFKA_BROKER is not defined."
         exit 1
       fi
-      echo "🔎 KAFKA_BROKER configurado como '$KAFKA_BROKER'"
-    - echo "✔ Kafka está rodando. Continuando com os testes..."
+      echo "KAFKA_BROKER set to '$KAFKA_BROKER'"
     - npm run lint
-    - npm test
+    - npm run test:unit
+    - npm run test:integration
     - docker compose -f docker-compose-tests.yml down
 
-# Publica no NPM apenas quando um tag vX.Y.Z for criada
 publish:
   stage: publish
   image: $NODE_IMAGE

@@ -20,19 +20,20 @@ jobs:
           registry-url: https://registry.npmjs.org/
 
       - name: Start Docker Compose services
-        run: docker-compose -f docker-compose-local.yml up -d
+        run: docker compose -f docker-compose-tests.yml up -d
 
       - name: Wait for Kafka to be ready
         run: |
           echo "Waiting for Kafka..."
           for i in {1..30}; do
-            docker exec $(docker ps -qf "name=kafka") kafka-topics.sh --bootstrap-server localhost:9092 --list && break
+            docker exec $(docker ps -qf "name=kafka") kafka-topics --bootstrap-server localhost:9092 --list && break
             sleep 3
           done
 
       - run: npm ci
       - run: npm run lint
-      - run: npm test
+      - run: npm run test:unit
+      - run: npm run test:integration
 
   publish:
     if: startsWith(github.ref, 'refs/tags/v')
