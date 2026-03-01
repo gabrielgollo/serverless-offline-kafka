@@ -1,5 +1,4 @@
 stages:
-  - setup
   - test
   - publish
 
@@ -8,27 +7,25 @@ variables:
   DOCKER_TLS_CERTDIR: ""
   NODE_ENV: test
   KAFKA_BROKER: localhost:9092
+  NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/.npm"
 
-setup-node:
-  stage: setup
-  image: $NODE_IMAGE
-  script:
-    - node -v
-    - npm -v
-    - npm ci
-  artifacts:
-    paths:
-      - node_modules/
-    expire_in: 30m
+cache:
+  key:
+    files:
+      - package-lock.json
+  paths:
+    - .npm/
+  policy: pull-push
 
 test:
   stage: test
   image: $NODE_IMAGE
   services:
     - docker:dind
-  dependencies:
-    - setup-node
   script:
+    - node -v
+    - npm -v
+    - npm ci --prefer-offline --no-audit
     - docker compose -f docker-compose-tests.yml -p teststack up -d
     - echo "Waiting for Kafka to start..."
     - |
@@ -49,14 +46,21 @@ test:
     - npm run lint
     - npm run test:unit
     - npm run test:integration
+  after_script:
     - docker compose -f docker-compose-tests.yml down
 
 publish:
   stage: publish
   image: $NODE_IMAGE
-  dependencies:
-    - setup-node
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - .npm/
+    policy: pull
   script:
+    - npm ci --prefer-offline --no-audit
     - npm publish
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/'
