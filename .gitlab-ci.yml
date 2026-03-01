@@ -4,7 +4,7 @@ stages:
   - publish
 
 variables:
-  NODE_IMAGE: 172.18.0.1:5000/node-docker-compose:v18
+  NODE_IMAGE: ubu1:5000/node-docker-compose:v18
   DOCKER_TLS_CERTDIR: ""
   NODE_ENV: test
   KAFKA_BROKER: localhost:9092
