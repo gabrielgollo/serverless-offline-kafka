@@ -7,12 +7,12 @@ const { Kafka } = require('kafkajs');
 const path = require('path');
 const { getSplitLinesTransform } = require('./utils');
 
-const KAFKA_BROKER = '127.0.0.1:9092';
+const KAFKA_BROKER = process.env.KAFKA_BROKER || '127.0.0.1:9092';
 const TOPIC = 'local.topic.test';
 
 const kafka = new Kafka({
   clientId: 'test-client-producer',
-  brokers: [KAFKA_BROKER],
+  brokers: KAFKA_BROKER.split(',').map((broker) => broker.trim()).filter(Boolean),
 });
 
 async function sendKafkaMessages() {

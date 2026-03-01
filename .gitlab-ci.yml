@@ -6,7 +6,7 @@ variables:
   NODE_IMAGE: ubu1:5000/node-docker-compose:v18
   DOCKER_TLS_CERTDIR: ""
   NODE_ENV: test
-  KAFKA_BROKER: localhost:9092
+  KAFKA_BROKER: docker:29092
   NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/.npm"
 
 cache:
@@ -29,11 +29,16 @@ test:
     - docker compose -f docker-compose-tests.yml -p teststack up -d
     - echo "Waiting for Kafka to start..."
     - |
-      for i in {1..30}; do
-        docker exec kafka kafka-topics --bootstrap-server localhost:9092 --list && break
-        echo "Waiting for Kafka... ($i)"; sleep 2
+      i=1
+      while [ "$i" -le 30 ]; do
+        if docker exec kafka kafka-topics --bootstrap-server kafka:9092 --list >/dev/null 2>&1; then
+          break
+        fi
+        echo "Waiting for Kafka... ($i)"
+        sleep 2
+        i=$((i + 1))
       done
-      if [ "$i" = "30" ]; then
+      if [ "$i" -gt 30 ]; then
         echo "Kafka did not respond after 30 attempts."
         exit 1
       fi
