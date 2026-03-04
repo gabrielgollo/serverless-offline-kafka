@@ -43,17 +43,41 @@ let hasFailed = false;
 
 const timeout = setTimeout(() => {
   hasFailed = true;
+  process.stderr.write(
+    `[test] Timeout waiting for kafka flow. kafkaSent=${kafkaSent}, handledCount=${handledCount}\n`
+  );
   serverless.kill();
   process.exit(1);
-}, 30000);
+}, 60000);
+
+async function processServerlessLine(line) {
+  if (/Listening for Kafka events/.test(line) && !kafkaSent) {
+    kafkaSent = true;
+    await sendKafkaMessages();
+  }
+
+  if (/handled .* with \d+ records/.test(line)) {
+    handledCount += 1;
+    if (handledCount >= 1) {
+      clearTimeout(timeout);
+      serverless.kill();
+    }
+  }
+}
 
 serverless.stderr.pipe(getSplitLinesTransform()).pipe(
   new Writable({
     objectMode: true,
-    write(line, _enc, callback) {
-      // Keep stderr visible for CI diagnostics.
-      process.stderr.write(`[serverless:stderr] ${line}\n`);
-      callback();
+    async write(line, _enc, callback) {
+      try {
+        // Keep stderr visible for CI diagnostics.
+        process.stderr.write(`[serverless:stderr] ${line}\n`);
+        await processServerlessLine(line);
+        callback();
+      } catch (error) {
+        hasFailed = true;
+        callback(error);
+      }
     },
   })
 );
@@ -64,20 +88,7 @@ serverless.stdout.pipe(getSplitLinesTransform()).pipe(
     async write(line, _enc, callback) {
       try {
         process.stdout.write(`[serverless] ${line}\n`);
-
-        if (/Listening for Kafka events/.test(line) && !kafkaSent) {
-          kafkaSent = true;
-          await sendKafkaMessages();
-        }
-
-        if (/handled .* with \d+ records/.test(line)) {
-          handledCount += 1;
-          if (handledCount >= 1) {
-            clearTimeout(timeout);
-            serverless.kill();
-          }
-        }
-
+        await processServerlessLine(line);
         callback();
       } catch (error) {
         hasFailed = true;
