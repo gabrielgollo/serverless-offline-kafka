@@ -33,8 +33,18 @@ test:
     - export KAFKA_ADVERTISED_HOST="docker"
     - export KAFKA_BROKER="docker:9092"
     - echo "KAFKA_BROKER set to '$KAFKA_BROKER'"
-    - docker info
-    - docker compose -f docker-compose-tests.yml -p teststack up -d
+    - |
+      i=1
+      while [ "$i" -le 30 ]; do
+        if docker info >/dev/null 2>&1; then
+          break
+        fi
+        echo "Waiting for Docker daemon... ($i/30)"
+        sleep 2
+        i=$((i + 1))
+      done
+      docker info
+    - docker compose -f docker-compose-tests.yml -p teststack up -d --wait --wait-timeout 180
     - echo "Waiting for Kafka to start..."
     - |
       node - <<'NODE'
