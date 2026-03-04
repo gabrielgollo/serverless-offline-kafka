@@ -16,12 +16,6 @@ services:
       KAFKA_CONFLUENT_SUPPORT_METRICS_ENABLE: false
     depends_on:
       - kafka-zookeeper
-    healthcheck:
-      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 25s
     networks:
       - testnet
 

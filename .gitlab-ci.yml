@@ -30,8 +30,20 @@ test:
     - node -v
     - npm -v
     - npm ci --prefer-offline --no-audit
-    - export KAFKA_ADVERTISED_HOST="docker"
-    - export KAFKA_BROKER="docker:9092"
+    - export DIND_IP="$(awk '$2 == \"docker\" { print $1; exit }' /etc/hosts)"
+    - |
+      if [ -z "$DIND_IP" ] && command -v getent >/dev/null 2>&1; then
+        DIND_IP="$(getent hosts docker | awk '{ print $1 }' | head -n1)"
+        export DIND_IP
+      fi
+    - |
+      if [ -z "$DIND_IP" ]; then
+        echo "Could not resolve docker:dind service IP."
+        exit 1
+      fi
+    - export KAFKA_ADVERTISED_HOST="$DIND_IP"
+    - export KAFKA_BROKER="$DIND_IP:9092"
+    - echo "DIND_IP resolved to '$DIND_IP'"
     - echo "KAFKA_BROKER set to '$KAFKA_BROKER'"
     - |
       i=1
@@ -44,7 +56,7 @@ test:
         i=$((i + 1))
       done
       docker info
-    - docker compose -f docker-compose-tests.yml -p teststack up -d --wait --wait-timeout 180
+    - docker compose -f docker-compose-tests.yml -p teststack up -d
     - echo "Waiting for Kafka to start..."
     - |
       node - <<'NODE'
@@ -95,6 +107,7 @@ test:
     - npm run test:integration
   after_script:
     - docker compose -f docker-compose-tests.yml -p teststack ps || true
+    - docker compose -f docker-compose-tests.yml -p teststack logs --no-color kafka-zookeeper || true
     - docker compose -f docker-compose-tests.yml -p teststack logs --no-color kafka || true
     - docker compose -f docker-compose-tests.yml -p teststack down -v || true
 
