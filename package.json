@@ -29,6 +29,8 @@
   "keywords": [
     "serverless",
     "serverless-offline",
+    "serverless-offline-kafka",
+    "@gabrielgollo/serverless-offline-kafka",
     "serverless-plugin",
     "lambda",
     "kafka",
