@@ -8,3 +8,6 @@ eslint.config.*
 Dockerfile
 docker-compose*
 .env
+.npm/
+.npmrc
+.gitlab-ci.yml

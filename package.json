@@ -1,8 +1,16 @@
 {
-  "name": "serverless-offline-kafka",
+  "name": "@gabrielgollo/serverless-offline-kafka",
   "version": "1.0.0",
   "description": "A serverless offline plugin that enables AWS Kafka events",
   "main": "src/index.js",
+  "files": [
+    "src/",
+    "docs/",
+    "README.md",
+    "LICENSE",
+    "CONTRIBUTING.md",
+    "serverless.kafka.yml"
+  ],
   "directories": {
     "example": "examples"
   },
@@ -33,6 +41,10 @@
     "url": "https://github.com/gabrielgollo/serverless-offline-kafka/issues"
   },
   "homepage": "https://github.com/gabrielgollo/serverless-offline-kafka#readme",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
