@@ -16,6 +16,7 @@ custom:
   serverless-offline-kafka:
     autoCreateTopics: true # If we can create topics in kafka automatically
     ssl: false
+    disableSaslAuth: true # Ignore saslScram512Auth and skip AWS Secret Manager lookup
 
 functions:
   myPromiseHandler:
@@ -27,3 +28,6 @@ functions:
           batchSize: 3
           bootstrapServers:
             - ${env:KAFKA_BROKER, 'localhost:9092'}
+          accessConfigurations:
+            # Kept here to mirror cloud config; ignored locally because disableSaslAuth is true above.
+            saslScram512Auth: arn:aws:secretsmanager:us-east-1:000000000000:secret:orders-monitoring-local-*

@@ -37,6 +37,7 @@ function normalizeCustomConfig(rawConfig) {
   return {
     autoCreateTopics: asBoolean(raw.autoCreateTopics, DEFAULT_CUSTOM_CONFIG.autoCreateTopics),
     ssl: asBoolean(raw.ssl, DEFAULT_CUSTOM_CONFIG.ssl),
+    disableSaslAuth: asBoolean(raw.disableSaslAuth, DEFAULT_CUSTOM_CONFIG.disableSaslAuth),
     clientId:
       typeof raw.clientId === 'string' && raw.clientId.trim().length > 0
         ? raw.clientId

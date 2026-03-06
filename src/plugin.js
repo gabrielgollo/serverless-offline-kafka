@@ -104,7 +104,8 @@ class ServerlessOfflineKafkaPlugin {
     const saslAuth = await resolveSaslConfig(
       kafkaEventConfig.accessConfigurations?.saslScram512Auth,
       this.serverless,
-      this.logger
+      this.logger,
+      { disableSaslAuth: this.customConfig.disableSaslAuth }
     );
 
     if (saslAuth) {

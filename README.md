@@ -54,6 +54,7 @@ custom:
   serverless-offline-kafka:
     autoCreateTopics: true
     ssl: false
+    disableSaslAuth: false
     clientId: serverless-offline-kafka
     defaultConsumerGroupId: serverless-offline-kafka
     sessionTimeout: 30000
@@ -68,6 +69,7 @@ custom:
 |---|---|---|---|
 | `autoCreateTopics` | boolean | `true` | Creates topic when missing (single partition, replication factor 1). |
 | `ssl` | boolean | `false` | Enables Kafka TLS connection. |
+| `disableSaslAuth` | boolean | `false` | Ignores `saslScram512Auth` completely. No SASL config is applied and no AWS Secret Manager lookup is performed. |
 | `clientId` | string | `serverless-offline-kafka` | Base KafkaJS client id. Function key is appended per consumer. |
 | `defaultConsumerGroupId` | string | `serverless-offline-kafka` | Consumer group fallback for events without explicit `consumerGroupId`. |
 | `sessionTimeout` | number | `30000` | Kafka consumer session timeout in ms. |
@@ -106,6 +108,42 @@ For SASL/SCRAM auth, `saslScram512Auth` supports:
 
 - inline object with `username` and `password`
 - AWS Secrets Manager ARN string (requires Serverless AWS provider support)
+- single-item array containing either an inline object or an ARN string
+
+Examples:
+
+```yaml
+# 1) Inline credentials object
+accessConfigurations:
+  saslScram512Auth:
+    username: my-user
+    password: my-password
+```
+
+```yaml
+# 2) AWS Secrets Manager ARN string
+accessConfigurations:
+  saslScram512Auth: arn:aws:secretsmanager:us-east-1:000000000000:secret:orders-monitoring-local-*
+```
+
+```yaml
+# 3) Single-item array (accepted for compatibility with some YAML/variable resolutions)
+accessConfigurations:
+  saslScram512Auth:
+    - arn:aws:secretsmanager:us-east-1:000000000000:secret:orders-monitoring-local-*
+```
+
+If an array is used, it must contain exactly one item.
+
+To force local execution without any SASL auth (for example, local Docker Kafka), set:
+
+```yaml
+custom:
+  serverless-offline-kafka:
+    disableSaslAuth: true
+```
+
+When `disableSaslAuth` is `true`, the plugin ignores `saslScram512Auth` even if an ARN is configured.
 
 `bootstrapServers` accepts:
 

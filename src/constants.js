@@ -6,6 +6,7 @@ const LOG_PREFIX = `[${PLUGIN_NAME}]`;
 const DEFAULT_CUSTOM_CONFIG = Object.freeze({
   autoCreateTopics: true,
   ssl: false,
+  disableSaslAuth: false,
   clientId: PLUGIN_NAME,
   defaultConsumerGroupId: PLUGIN_NAME,
   sessionTimeout: 30000,

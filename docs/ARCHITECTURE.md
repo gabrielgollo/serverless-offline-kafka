@@ -17,6 +17,8 @@ The plugin keeps event payloads compatible with AWS `SelfManagedKafka` shape and
   - Validates required fields and applies defaults
 - `src/auth.js`
   - Resolves SASL/SCRAM credentials from inline config or AWS Secrets Manager ARN
+  - Accepts single-item array wrappers for compatibility with YAML/variable resolution
+  - Skips auth resolution entirely when `custom.serverless-offline-kafka.disableSaslAuth` is `true`
 - `src/event-payload.js`
   - Converts KafkaJS messages into Lambda-compatible kafka records
 - `src/batch-accumulator.js`
@@ -31,7 +33,7 @@ The plugin keeps event payloads compatible with AWS `SelfManagedKafka` shape and
 3. Plugin scans service functions and collects kafka events
 4. For each kafka event:
    - normalize config
-   - resolve auth (if configured)
+   - resolve auth (if configured and not disabled by `disableSaslAuth`)
    - initialize Kafka consumer
    - subscribe to topic
    - process each message into batching pipeline

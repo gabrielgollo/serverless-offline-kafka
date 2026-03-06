@@ -8,19 +8,40 @@ function validateSecretPayload(payload) {
   }
 }
 
-async function resolveSaslConfig(authConfig, serverless, logger) {
-  if (!authConfig) {
+function normalizeAuthConfigInput(authConfig) {
+  if (!Array.isArray(authConfig)) {
+    return authConfig;
+  }
+
+  if (authConfig.length !== 1) {
+    throw new Error(
+      'Invalid saslScram512Auth configuration. When using an array, provide exactly one item.'
+    );
+  }
+
+  return authConfig[0];
+}
+
+async function resolveSaslConfig(authConfig, serverless, logger, options = {}) {
+  if (options.disableSaslAuth === true) {
+    logger?.info('SASL auth is disabled by configuration. Ignoring saslScram512Auth.');
     return null;
   }
 
-  if (typeof authConfig === 'string') {
-    if (!authConfig.includes('arn:aws:secretsmanager')) {
+  const normalizedAuthConfig = normalizeAuthConfigInput(authConfig);
+
+  if (!normalizedAuthConfig) {
+    return null;
+  }
+
+  if (typeof normalizedAuthConfig === 'string') {
+    if (!normalizedAuthConfig.includes('arn:aws:secretsmanager')) {
       throw new Error(
         'Invalid saslScram512Auth value. When using a string, an AWS Secrets Manager ARN is expected.'
       );
     }
 
-    logger.info(`Resolving Kafka auth credentials from AWS Secrets Manager: ${authConfig}`);
+    logger.info(`Resolving Kafka auth credentials from AWS Secrets Manager: ${normalizedAuthConfig}`);
     const awsProvider = serverless?.providers?.aws;
     if (!awsProvider || typeof awsProvider.getSecretValue !== 'function') {
       throw new Error(
@@ -28,7 +49,7 @@ async function resolveSaslConfig(authConfig, serverless, logger) {
       );
     }
 
-    const secret = await awsProvider.getSecretValue(authConfig);
+    const secret = await awsProvider.getSecretValue(normalizedAuthConfig);
     const secretPayload = JSON.parse(secret.SecretString || '{}');
     validateSecretPayload(secretPayload);
 
@@ -39,13 +60,13 @@ async function resolveSaslConfig(authConfig, serverless, logger) {
     };
   }
 
-  if (typeof authConfig === 'object') {
-    validateSecretPayload(authConfig);
+  if (typeof normalizedAuthConfig === 'object') {
+    validateSecretPayload(normalizedAuthConfig);
     logger.info('Using inline Kafka authentication configuration for SASL/SCRAM-512.');
     return {
       mechanism: 'scram-sha-512',
-      username: authConfig.username,
-      password: authConfig.password,
+      username: normalizedAuthConfig.username,
+      password: normalizedAuthConfig.password,
     };
   }
 

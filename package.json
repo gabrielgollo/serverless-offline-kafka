@@ -1,6 +1,6 @@
 {
   "name": "@gabrielgollo/serverless-offline-kafka",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "A serverless offline plugin that enables AWS Kafka events",
   "main": "src/index.js",
   "files": [
