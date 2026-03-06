@@ -9,6 +9,7 @@ const { getSplitLinesTransform } = require('./utils');
 
 const KAFKA_BROKER = process.env.KAFKA_BROKER || '127.0.0.1:9092';
 const TOPIC = 'local.topic.test';
+const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 const kafka = new Kafka({
   clientId: 'test-client-producer',
@@ -31,23 +32,74 @@ async function sendKafkaMessages() {
   await producer.disconnect();
 }
 
-const serverless = spawn('npm', ['run', 'start'], {
+const serverless = spawn(npmCommand, ['run', 'start'], {
   cwd: path.resolve(__dirname, '..'),
   stdio: ['pipe', 'pipe', 'pipe'],
-  shell: true,
+  shell: process.platform === 'win32',
+  detached: process.platform !== 'win32',
 });
 
 let handledCount = 0;
 let kafkaSent = false;
 let hasFailed = false;
+let completedSuccessfully = false;
+let shutdownRequested = false;
+let forceExitTimer = null;
+
+function scheduleForcedExit(exitCode) {
+  if (forceExitTimer) {
+    return;
+  }
+
+  forceExitTimer = setTimeout(() => {
+    process.stderr.write('[test] Forced exit after waiting for serverless shutdown.\n');
+    process.exit(exitCode);
+  }, 10000);
+}
+
+function requestServerlessShutdown({ reason, exitCode }) {
+  if (shutdownRequested) {
+    return;
+  }
+
+  shutdownRequested = true;
+  clearTimeout(timeout);
+  process.stderr.write(`[test] Requesting serverless shutdown (${reason}).\n`);
+  scheduleForcedExit(exitCode);
+
+  if (process.platform !== 'win32' && typeof serverless.pid === 'number') {
+    try {
+      process.kill(-serverless.pid, 'SIGTERM');
+    } catch (_error) {
+      serverless.kill('SIGTERM');
+    }
+
+    const killTimer = setTimeout(() => {
+      if (serverless.exitCode === null) {
+        try {
+          process.kill(-serverless.pid, 'SIGKILL');
+        } catch (_error) {
+          serverless.kill('SIGKILL');
+        }
+      }
+    }, 3000);
+
+    if (typeof killTimer.unref === 'function') {
+      killTimer.unref();
+    }
+
+    return;
+  }
+
+  serverless.kill('SIGTERM');
+}
 
 const timeout = setTimeout(() => {
   hasFailed = true;
   process.stderr.write(
     `[test] Timeout waiting for kafka flow. kafkaSent=${kafkaSent}, handledCount=${handledCount}\n`
   );
-  serverless.kill();
-  process.exit(1);
+  requestServerlessShutdown({ reason: 'timeout', exitCode: 1 });
 }, 60000);
 
 async function processServerlessLine(line) {
@@ -59,8 +111,8 @@ async function processServerlessLine(line) {
   if (/handled .* with \d+ records/.test(line)) {
     handledCount += 1;
     if (handledCount >= 1) {
-      clearTimeout(timeout);
-      serverless.kill();
+      completedSuccessfully = true;
+      requestServerlessShutdown({ reason: 'integration-finished', exitCode: 0 });
     }
   }
 }
@@ -99,16 +151,31 @@ serverless.stdout.pipe(getSplitLinesTransform()).pipe(
 );
 
 serverless.on('close', (code) => {
+  if (forceExitTimer) {
+    clearTimeout(forceExitTimer);
+    forceExitTimer = null;
+  }
+
   if (hasFailed) {
     process.exit(1);
+  }
+
+  if (completedSuccessfully) {
+    process.exit(0);
   }
 
   const normalizedCode = code === null ? 0 : code;
   process.exit(normalizedCode);
 });
 
+serverless.on('error', (error) => {
+  hasFailed = true;
+  process.stderr.write(`[test] Failed to start serverless process: ${error.message}\n`);
+  requestServerlessShutdown({ reason: 'spawn-error', exitCode: 1 });
+});
+
 onExit((_code, signal) => {
   if (signal) {
-    serverless.kill(signal);
+    requestServerlessShutdown({ reason: `parent-signal-${signal}`, exitCode: 1 });
   }
 });
