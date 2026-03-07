@@ -1,0 +1,8 @@
+node_modules
+.serverless
+
+avro
+messages
+publish-to-kafka.js
+
+package-lock.json

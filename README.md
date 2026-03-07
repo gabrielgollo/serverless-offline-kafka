@@ -23,7 +23,7 @@ It runs alongside `serverless-offline`, starts Kafka consumers defined in your `
 Install required plugins:
 
 ```bash
-npm install --save-dev serverless-offline serverless-offline-kafka@npm:@gabrielgollo/serverless-offline-kafka@^1.0.0
+npm install --save-dev serverless-offline serverless-offline-kafka@npm:@gabrielgollo/serverless-offline-kafka@^1.0.6
 ```
 
 Add both plugins in your `package.json` (using npm alias for this plugin):
@@ -32,7 +32,7 @@ Add both plugins in your `package.json` (using npm alias for this plugin):
 {
   "devDependencies": {
     "serverless-offline": "^13.9.0",
-    "serverless-offline-kafka": "npm:@gabrielgollo/serverless-offline-kafka@^1.0.0"
+    "serverless-offline-kafka": "npm:@gabrielgollo/serverless-offline-kafka@^1.0.6"
   }
 }
 ```

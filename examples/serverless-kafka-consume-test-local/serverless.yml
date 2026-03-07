@@ -1,0 +1,55 @@
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: serverless-test-offline
+frameworkVersion: "4"
+
+plugins:
+  - serverless-offline
+  - serverless-offline-kafka
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  # Uncomment to easily set up a custom domain. Read the docs for more details:
+  # https://www.serverless.com/framework/docs/providers/aws/guide/domains
+  # domain: api.example.com
+
+custom:
+  serverless-offline-kafka:
+    autoCreateTopics: true # Automatically create topics if they don't exist
+    ssl: false # Set to true if your Kafka broker requires SSL
+    disableSaslAuth: true # Set to true to disable SASL authentication, useful for local development
+    clientId: serverless-offline-kafka
+    defaultConsumerGroupId: serverless-offline-kafka
+    sessionTimeout: 30000 # Time in milliseconds to wait for a response from the broker before considering the consumer dead
+    heartbeatInterval: 3000 # Time in milliseconds between heartbeats to the broker to keep the consumer alive
+    batchSize: 1 # Number of messages to process in a single batch
+    maximumBatchingWindowInSeconds: 0 # Time in seconds to wait before processing a batch of messages, even if the batch size is not reached
+
+functions:
+  hello:
+    handler: handler.hello
+    events:
+      - httpApi:
+          path: /
+          method: get
+
+  validateEventsLambda:
+    description: 'Conecta com o event-hub e gera um CSV'
+    handler: handler.kafkaHandler
+    timeout: 900  # set TIMEOUT to 5 minutes. -- 15 minutes is the maximum time for a lambda function to run.
+    reservedConcurrency: 1
+    events:
+      - kafka:
+          topic: teste-topic
+          startingPosition: 'TRIM_HORIZON'
+          bootstrapServers: 
+            - localhost:29092
+          consumerGroupId: teste
+          accessConfigurations:
+            vpcSubnet: 
+              - subnet-local
+            vpcSecurityGroup:
+              - sg-local
+            saslScram512Auth: "arn:aws:secretsmanager:us-east-1:000000000000:secret:teste-*"
+          enabled: true
+          batchSize: 5
